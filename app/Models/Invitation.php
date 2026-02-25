@@ -16,13 +16,14 @@ class Invitation extends Model
         'refused_at',
     ];
 
-    protected $dates = [
-        'expires_at',
-        'accepted_at',
-        'refused_at',
+    protected $casts = [
+        'expires_at' => 'datetime',
+        'accepted_at' => 'datetime',
+        'refused_at' => 'datetime',
     ];
 
-    public function colocation(){
+    public function colocation()
+    {
         return $this->belongsTo(Colocation::class);
     }
 }

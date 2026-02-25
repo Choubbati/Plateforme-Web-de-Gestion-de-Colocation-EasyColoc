@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\ColocationInvitationMail;
 use App\Models\Colocation;
 use App\Models\Invitation;
 use App\Models\Membership;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 
 class InvitationController extends Controller
@@ -13,7 +15,6 @@ class InvitationController extends Controller
     // Owner: create invitation
     public function store(Request $request, Colocation $colocation)
     {
-        // ✅ فقط owner ديال هاد colocation يقدر ي invite
         $isOwner = $colocation->memberships()
             ->where('user_id', auth()->id())
             ->whereNull('left_at')
@@ -26,7 +27,6 @@ class InvitationController extends Controller
             'email' => ['required', 'email'],
         ]);
 
-        // (اختياري) منع تكرار دعوة pending لنفس الإيميل
         $alreadyPending = $colocation->invitations()
             ->where('email', $data['email'])
             ->where('status', 'pending')
@@ -45,10 +45,13 @@ class InvitationController extends Controller
             'expires_at' => now()->addDays(3),
         ]);
 
-        // ✅ فـ هاد المرحلة: كنوريه link باش ينسخو (حتى يولي email شغال)
         $link = route('invitations.show', $invitation->token);
 
-        return back()->with('success', 'Invitation créée. Lien: ' . $link);
+        Mail::to($invitation->email)->send(
+            new ColocationInvitationMail($invitation, $link)
+        );
+
+        return back()->with('success', 'Invitation envoyée par email.');
     }
 
     // Invited user: open invitation page
