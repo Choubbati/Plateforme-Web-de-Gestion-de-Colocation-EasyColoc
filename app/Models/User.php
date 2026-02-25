@@ -2,21 +2,14 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
-     */
     protected $fillable = [
         'name',
         'email',
@@ -27,32 +20,31 @@ class User extends Authenticatable
         'reputation_score',
     ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var list<string>
-     */
     protected $hidden = [
         'password',
         'remember_token',
     ];
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
     protected function casts(): array
     {
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+
+            'is_banned' => 'boolean',
+            'banned_at' => 'datetime',
+            'reputation_score' => 'integer',
         ];
     }
 
+    /* ================= Relations ================= */
 
-    public function colocation(){
-        return $this->belongsToMany(Colocation::class,'memberships')->withPivot('role','joined_at','left_at')->withTimestamps();
+    // User ↔ Colocation (many-to-many via memberships pivot)
+    public function colocations()
+    {
+        return $this->belongsToMany(Colocation::class, 'memberships')
+            ->withPivot('role', 'joined_at', 'left_at')
+            ->withTimestamps();
     }
 
     public function memberships()
@@ -60,22 +52,28 @@ class User extends Authenticatable
         return $this->hasMany(Membership::class);
     }
 
-    public function activeMembership(){
+    public function activeMembership()
+    {
         return $this->hasOne(Membership::class)->whereNull('left_at');
     }
 
-    public function expensePaid()
+    public function expensesPaid()
     {
-        return $this->hasMany(Expense::class,'payer_id');
+        return $this->hasMany(Expense::class, 'payer_id');
     }
 
     public function settlementsToPay()
     {
-        return $this->hasMany(Settlement::class,'from_user_id');
+        return $this->hasMany(Settlement::class, 'from_user_id');
     }
 
-    public function settlementToReceive(){
-        return $this->hasMany(Settlement::class,'to_user_id');
+    public function settlementsToReceive()
+    {
+        return $this->hasMany(Settlement::class, 'to_user_id');
     }
 
+    public function isAdminGlobal(): bool
+    {
+        return $this->global_role === 'admin';
+    }
 }
