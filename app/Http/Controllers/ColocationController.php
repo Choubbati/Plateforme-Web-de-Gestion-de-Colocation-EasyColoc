@@ -50,23 +50,47 @@ class ColocationController extends Controller
 
     public function show(Colocation $colocation)
     {
-        $isMember = $colocation->memberships()
+        // load العلاقات اللي محتاجين
+        $colocation->load(['activeMembers', 'categories', 'memberships']);
+
+        // membership ديال المستخدم الحالي
+        $myMembership = $colocation->memberships
             ->where('user_id', auth()->id())
             ->whereNull('left_at')
-            ->exists();
+            ->first();
 
-        if (!$isMember) {
-            abort(403);
-        }
+        // حماية: غير active member يشوف
+        abort_unless($myMembership, 403);
 
-        $members = $colocation->members()
-            ->withPivot('role', 'joined_at', 'left_at')
-            ->orderBy('name')
-            ->get();
+        // expenses ديال هاد colocation (نحتاج payer_id)
+        $expenses = \App\Models\Expense::where('colocation_id', $colocation->id)->get();
+
+        $activeMembers = $colocation->activeMembers;
+
+        $membersCount = max(1, $activeMembers->count()); // احتياط
+        $totalSpent = $expenses->sum('amount');
+        $share = $membersCount ? ($totalSpent / $membersCount) : 0;
+
+        // حساب paid و balance لكل member
+        $balances = $activeMembers->map(function ($member) use ($expenses, $share) {
+            $paid = $expenses->where('payer_id', $member->id)->sum('amount');
+            $balance = $paid - $share;
+
+            return [
+                'user' => $member,
+                'paid' => round($paid, 2),
+                'share' => round($share, 2),
+                'balance' => round($balance, 2),
+            ];
+        });
 
         return view('colocations.show', [
             'colocation' => $colocation,
-            'members' => $members,
+            'myMembership' => $myMembership,
+            'expenses' => $expenses,
+            'balances' => $balances,
+            'totalSpent' => round($totalSpent, 2),
+            'share' => round($share, 2),
         ]);
     }
 }

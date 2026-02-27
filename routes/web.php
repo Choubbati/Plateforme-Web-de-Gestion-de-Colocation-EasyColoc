@@ -1,7 +1,9 @@
 <?php
 
+use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ColocationController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
@@ -50,6 +52,23 @@ Route::middleware(['auth'])->group(function () {
 
     Route::post('/invitations/{token}/refuse', [InvitationController::class, 'refuse'])
         ->name('invitations.refuse');
+});
+
+
+Route::middleware(['auth'])->group(function () {
+    Route::post('/colocations/{colocation}/categories', [CategoryController::class, 'store'])
+        ->name('categories.store');
+
+    Route::delete('/categories/{category}', [CategoryController::class, 'destroy'])
+        ->name('categories.destroy');
+});
+Route::post('/colocations/{colocation}/expenses', [ExpenseController::class, 'store'])
+    ->name('expenses.store');
+
+
+Route::middleware(['auth'])->group(function () {
+    Route::post('/colocations/{colocation}/expenses', [ExpenseController::class, 'store'])
+        ->name('expenses.store');
 });
 
 require __DIR__.'/auth.php';

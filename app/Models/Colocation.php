@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Category;
+
 
 class Colocation extends Model
 {
@@ -25,6 +27,14 @@ class Colocation extends Model
         return $this->hasMany(Membership::class);
     }
 
+    public function activeMembers()
+    {
+        return $this->belongsToMany(User::class, 'memberships')
+            ->wherePivotNull('left_at')
+            ->withPivot('role', 'joined_at', 'left_at')
+            ->withTimestamps();
+    }
+
     public function invitations()
     {
         return $this->hasMany(Invitation::class);
@@ -32,7 +42,7 @@ class Colocation extends Model
 
     public function categories()
     {
-        return $this->hasMany(Colocation::class);
+        return $this->hasMany(Category::class, 'colocation_id');
     }
 
     public function expense()
